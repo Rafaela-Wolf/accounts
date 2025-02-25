@@ -28,7 +28,7 @@ function operations() {
         } else if (action === 'Depositar') {
             deposit();
         } else if (action === 'Sacar') {
-
+            withdraw();
         } else if (action === 'Sair') {
             console.log(chalk.bgBlue.black("Obrigado por utilizar o Accounts!"));
             process.exit();
@@ -153,4 +153,54 @@ function getAccountBalance() {
         operations();
     })
     .catch((error) => console.log(error))
+}
+
+function withdraw() {
+    inquirer.prompt([{
+        name: 'accountName',
+        message: 'Qual o nome da sua conta?'
+    }])
+    .then((answer) => {
+        const accountName = answer['accountName'];
+
+        if(!checkAccount(accountName)) {
+            return operations();
+        }
+
+        inquirer.prompt([{
+            name: 'amount',
+            message: 'Quanto você deseja sacar?'
+        }]).then((answer) => {
+            const amount = parseFloat(answer['amount']);
+
+            if (isNaN(amount) || amount <= 0) {
+                console.log(chalk.bgRed.black("Valor inválido, tente novamente!"));
+                return withdraw();
+            }
+
+            removeAmount(accountName, amount);
+        })
+        .catch((error) => console.log(error));
+    })
+    .catch((error) => console.log(error));
+}
+
+function removeAmount(accountName, amount) {
+    const accountData = getAccount(accountName);
+
+    if(accountData.balance < amount) {
+        console.log(chalk.bgRed.black("Valor indisponível!"));
+        return withdraw();
+    }
+
+    accountData.balance -= amount; 
+
+    fs.writeFileSync(
+        `accounts/${accountName}.json`, 
+        JSON.stringify(accountData),
+    )
+
+    console.log(chalk.green(`Foi sacado o valor de R$${amount}.`));
+    
+    operations();
 }
