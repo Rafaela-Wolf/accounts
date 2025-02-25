@@ -26,7 +26,7 @@ function operations() {
         } else if (action === 'Consultar saldo') {
 
         } else if (action === 'Depositar') {
-
+            deposit();
         } else if (action === 'Sacar') {
 
         } else if (action === 'Sair') {
@@ -60,16 +60,12 @@ function buildAccount() {
 
         if (fs.existsSync(`accounts/${accountName}.json`)) {
             console.log(chalk.bgRed.black('Esta conta já existe, escolha outro nome!'));
-            buildAccount();
-            return;
+            return buildAccount();
         }
 
         fs.writeFileSync(
             `accounts/${accountName}.json`, 
             JSON.stringify({ "balance": 0 }),
-            function(error) {
-                console.log(chalk.bgRed.black(error));
-            }
         )
 
         console.log(chalk.green('Parabéns, sua conta foi criada com sucesso!'));
@@ -77,3 +73,64 @@ function buildAccount() {
     })
     .catch((error) => console.log(error));
 };
+
+function deposit() {
+    inquirer.prompt([{
+        name: 'accountName',
+        message: 'Qual o nome da sua conta?'
+    }])
+    .then((answer) => {
+        const accountName = answer['accountName'];
+
+        if(!checkAccount(accountName)) {
+            return operations();
+        }
+
+        inquirer.prompt([{
+            name: 'amount',
+            message: 'Quanto você deseja depositar?'
+        }]).then((answer) => {
+            const amount = parseFloat(answer['amount']);
+
+            if (isNaN(amount) || amount <= 0) {
+                console.log(chalk.bgRed.black("Valor inválido, tente novamente!"));
+                return deposit();
+            }
+
+            addAmount(accountName, amount);
+
+            operations();
+        })
+        .catch((error) => console.log(error));
+    })
+    .catch((error) => console.log(error));
+};
+
+function checkAccount(accountName) {
+    if(!fs.existsSync(`accounts/${accountName}.json`)) {
+        console.log(chalk.bgRed.black('Esta conta não existe. Tente novamente!'));
+        return false;
+    }
+    return true;
+}
+
+function addAmount(accountName, amount) {
+    const accountData = getAccount(accountName);
+    accountData.balance += amount; 
+
+    fs.writeFileSync(
+        `accounts/${accountName}.json`, 
+        JSON.stringify(accountData),
+    )
+
+    console.log(chalk.green(`Foi depositado o valor de R$${amount} na sua conta.`));
+}
+
+function getAccount(accountName) {
+    const accountJSON = fs.readFileSync(`accounts/${accountName}.json`, {
+        encoding: 'utf8',
+        flag: 'r'
+    })
+
+    return JSON.parse(accountJSON);
+}
